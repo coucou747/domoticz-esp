@@ -131,10 +131,22 @@ int Domoticz::relayID(int nth){
 JSONVar Domoticz::deviceStatus(int IDX){
   return sendDomoticz("/json.htm?type=devices&rid="+String(IDX));
 }
-
 bool Domoticz::isRelayOn(int IDX){
   if (IDX == -1){
     return false;
   }
   return String((const char*)deviceStatus(IDX)[ "result" ][0]["Status"]) == String("On");
+}
+
+int Domoticz::createVirtualSensor(String name, int type){
+  return idx_of_jsonvar(sendDomoticz("/json.htm?type=createvirtualsensor&idx=" + String(IDX_HARDWARE) + "&sensorname="+name+"&sensortype="+String(type)));
+}
+
+
+int Domoticz::createDevice(String name, int type, int subtype){
+    return idx_of_jsonvar(sendDomoticz("/json.htm?type=createdevice&idx=" + String(IDX_HARDWARE) + "&sensorname="+name+"&devicetype="+String(type)+"&devicesubtype="+String(subtype)));
+}
+
+void Domoticz::sendValue(int IDX, String value){
+    sendDomoticz("/json.htm?type=command&param=udevice&idx=" + String(IDX) + "&nvalue=0&svalue=" + value);
 }

@@ -25,7 +25,9 @@ class Domoticz {
     int findIdxSensorOfHardware(String property, int value);
     int findIdxSensorOfHardware(String property, String value);
     int relayID(int nth);
-
+    int createVirtualSensor(String name, int type);
+    int createDevice(String name, int type, int subtype);
+    void sendValue(int IDX, String value);
     JSONVar deviceStatus(int IDX) ;
     bool isRelayOn(int IDX) ;
 };

@@ -112,7 +112,7 @@ void setup() {
   dht.begin();
   IDX_DHT = dom.findIdxSensorOfHardware("Type", "Temp + Humidity");
   if (IDX_DHT == -1) {
-    IDX_DHT = dom.idx_of_jsonvar(dom.sendDomoticz("/json.htm?type=createvirtualsensor&idx=" + String(dom.IDX_HARDWARE) + "&sensorname=TempHum"+String(dom.IDX_HARDWARE)+"&sensortype=82"));
+    IDX_DHT = dom.createVirtualSensor("TempHum"+String(dom.IDX_HARDWARE), 82);
     Serial.printf("[Domoticz] final DHT IDX=%d...\n", IDX_DHT);
   }
 #endif
@@ -121,7 +121,7 @@ void setup() {
 
 #ifdef FEATURE_VOLTAGE
     IDX_VOLTAGE = dom.findIdxSensorOfHardware("SubType", "Voltage");
-    if (IDX_VOLTAGE == -1) IDX_VOLTAGE = dom.id_of_jsonvar(dom.sendDomoticz("/json.htm?type=createdevice&idx=" + String(dom.IDX_HARDWARE) + "&sensorname=Voltage0&devicetype=243&devicesubtype=8"));
+    if (IDX_VOLTAGE == -1) IDX_VOLTAGE = dom.createDevice("Voltage"+String(dom.IDX_HARDWARE), 243, 8);
     Serial.printf("Voltage sensor IDX = %d\n", IDX_VOLTAGE);
 #endif
 
@@ -132,27 +132,27 @@ void setup() {
       Serial.printf("this wifi %s\n", WifiString.c_str());
       for (int i = 0; i < count_relay; i ++) {
         String name("Switch_" + String(i));
-        String IDX_RELAY = (const char*) (dom.sendDomoticz("/json.htm?type=createvirtualsensor&idx=" + String(dom.IDX_HARDWARE) + "&sensorname=" + name + "&sensortype=6")["idx"]);
-        Serial.printf("Switch (%s) added to domoticz (ID %s)\n", name.c_str(), IDX_RELAY.c_str());
+        int IDX_RELAY = dom.createVirtualSensor(name, 6);
+        Serial.printf("Switch (%s) added to domoticz (ID %d)\n", name.c_str(), IDX_RELAY);
         String url_On = base64_encode("http://" + WifiString + "/Switch?id=" + i + "_" + "&state=1");
         String url_Off = base64_encode("http://" + WifiString + "/Switch?id=" + i + "_" + "&state=0");
-        dom.sendDomoticz("/json.htm?addjvalue=0&addjvalue2=0&customimage=0&description=&idx=" + IDX_RELAY + "&name=" + name + "&options=&protected=false&strparam1=" + url_On + "&strparam2=" + url_Off + "&switchtype=0&type=setused&used=true");
+        dom.sendDomoticz("/json.htm?addjvalue=0&addjvalue2=0&customimage=0&description=&idx=" + String(IDX_RELAY) + "&name=" + name + "&options=&protected=false&strparam1=" + url_On + "&strparam2=" + url_Off + "&switchtype=0&type=setused&used=true");
       }
     }
-  for (int i = 0; i < count_relay; i ++) {
-    int idx = dom.relayID(i);
+    for (int i = 0; i < count_relay; i ++) {
+      int idx = dom.relayID(i);
       Serial.printf("init idx=%d relay(%d)...\n", idx, i);
       bool relay_on = dom.isRelayOn( idx );
       Serial.printf("value %d\n", relay_on ? 1 : 0);
-    digitalWrite(relay_enabled[i], relay_on ? HIGH : LOW); // TODO demander au serveur ?
-  }
+      digitalWrite(relay_enabled[i], relay_on ? HIGH : LOW); // TODO demander au serveur ?
+    }
 #endif
 
 #ifdef FEATURE_MOTION
-    IDX_MOTION = dom.findIdxSensorOfHardware(IDX_HARDWARE, "SwitchTypeVal", 8);
+    IDX_MOTION = dom.findIdxSensorOfHardware("SwitchTypeVal", 8);
     if (IDX_MOTION == -1){
       String motion_name = "Motion_Sensor";
-      IDX_MOTION = dom.id_of_jsonvar(dom.sendDomoticz("/json.htm?type=createvirtualsensor&idx=" + String(dom.IDX_HARDWARE) + "&sensorname=" + motion_name + "&sensortype=6"));
+      IDX_MOTION = dom.createVirtualSensor(motion_name, 6);
       dom.sendDomoticz("/json.htm?addjvalue=60&addjvalue2=0&customimage=0&description=&idx=" + String(IDX_MOTION) + "&name=" + motion_name + "&options=&protected=false&strparam1=&strparam2=&switchtype=8&type=setused&used=true");
       Serial.printf("Motion sensor added to domoticz (ID %d)\n", IDX_MOTION);
     }
@@ -188,7 +188,7 @@ void loop() {
     }
 #ifdef FEATURE_VOLTAGE
     Serial.printf("voltage : %s\n", String(ESP.getVcc() / 1024.0f, 3).c_str());
-    dom.sendDomoticz("/json.htm?type=command&param=udevice&idx=" + String(IDX_VOLTAGE) + "&nvalue=0&svalue=" + String(ESP.getVcc() / 1024.0f, 3));
+    dom.sendValue(IDX_VOLTAGE,  String(ESP.getVcc() / 1024.0f, 3));
 #endif
 
 
@@ -196,7 +196,7 @@ void loop() {
     float temperature = dht.readTemperature();
     float hum = dht.readHumidity();
     int hum_sat = hum2humsat(hum);
-    dom.sendDomoticz("/json.htm?type=command&param=udevice&idx=" + String(IDX_DHT) + "&nvalue=0&svalue=" + String(temperature) + ";" + hum + ";" + hum_sat);
+    dom.sendValue(IDX_DHT,  String(temperature) + ";" + hum + ";" + hum_sat);
 
 #endif
   }
