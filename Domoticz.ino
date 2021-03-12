@@ -18,20 +18,22 @@ void Domoticz::Setup(String host_, int port_){
 
   int hardwareID = ESP.getChipId();
   String hardwareName = "esp_" + String(hardwareID);
-  IDX_HARDWARE = dom.findIdxHardware(hardwareName);
+  IDX_HARDWARE = findIdxHardware(hardwareName);
   if (IDX_HARDWARE == -1) {
-    dom.sendDomoticz("/json.htm?type=command&param=addhardware&htype=15&name=" + hardwareName + "&enabled=true&datatimeout=0");
-    IDX_HARDWARE = dom.findIdxHardware(hardwareName);
+    sendDomoticz("/json.htm?type=command&param=addhardware&htype=15&name=" + hardwareName + "&enabled=true&datatimeout=0");
+    IDX_HARDWARE = findIdxHardware(hardwareName);
     Serial.printf("Hardware added to domoticz (ID %d)\n", IDX_HARDWARE);
   } 
 }
 
 JSONVar Domoticz::sendDomoticz(String url) {
-  Serial.printf("[Send] %S\n", url.c_str());
+  Serial.printf("[sendDomoticz] >> %S\n", url.c_str());
   http.begin(host, port, url);
   int httpCode = http.GET();
   if (httpCode == 200) {
-    JSONVar result = JSON.parse(http.getString());
+    String ret = http.getString();
+    //Serial.printf("[sendDomoticz] << %S\n", ret.c_str());
+    JSONVar result = JSON.parse(ret);
     http.end();
     return result;
   } else {
@@ -40,9 +42,6 @@ JSONVar Domoticz::sendDomoticz(String url) {
     JSONVar nulljson(false);
     return nulljson;
   }
-  http.end();
-  JSONVar nulljson(false);
-  return nulljson;
 }
 
 int Domoticz::idx_of_jsonvar(JSONVar v){
@@ -96,7 +95,7 @@ int Domoticz::findIdxSensorOfHardware(int idHardware, String property, int value
   return -1;
 }
 int Domoticz::findIdxSensorOfHardware(int idHardware, String property, int value) {
-  return findIdxSensorOfHardware(idHardware, property, value);
+  return findIdxSensorOfHardware(idHardware, property, value, 0);
 }
 
 int Domoticz::findIdxSensorOfHardware(int idHardware, String property, String value) {
@@ -149,4 +148,7 @@ int Domoticz::createDevice(String name, int type, int subtype){
 
 void Domoticz::sendValue(int IDX, String value){
     sendDomoticz("/json.htm?type=command&param=udevice&idx=" + String(IDX) + "&nvalue=0&svalue=" + value);
+}
+void Domoticz::sendSValue(int IDX, String value){
+    sendDomoticz("/json.htm?type=command&param=udevice&idx=" + String(IDX) + "&svalue=" + value);
 }

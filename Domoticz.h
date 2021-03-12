@@ -28,6 +28,7 @@ class Domoticz {
     int createVirtualSensor(String name, int type);
     int createDevice(String name, int type, int subtype);
     void sendValue(int IDX, String value);
+    void sendSValue(int IDX, String value);
     JSONVar deviceStatus(int IDX) ;
     bool isRelayOn(int IDX) ;
 };

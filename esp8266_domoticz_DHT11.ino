@@ -41,6 +41,13 @@ void relayFromServer() {
 }
 #endif
 
+#ifdef FEATURE_SERVER
+void statusPage(){
+  String espName(ESP.getChipId());
+  server.send(200, "text/html", "<html><head><title>"+espName+"</title></head><body><h1>"+espName+"</h1><pre>free memory : "+String(ESP.getFreeHeap())+"\nlast reset : "+ESP.getResetReason()+"\nmhz: "+ESP.getCpuFreqMHz()+"\nwatchdog:"+watchdog+"</pre></body></html>");
+}
+#endif
+
 void WaitWifi() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(250);
@@ -77,6 +84,9 @@ void ICACHE_RAM_ATTR detectsMovement() {
 }
 #endif
 
+#ifdef FEATURE_LIGHTSENSOR
+  int IDX_LIGHTSENSOR = -1;
+#endif
 
 void setup() {
   Serial.begin(115200);
@@ -86,8 +96,17 @@ void setup() {
   WaitWifi();
   dom.Setup(host, port);;
 
+#ifdef FEATURE_LIGHTSENSOR
+  pinMode( PIN_LIGHTSENSOR, INPUT );
+  IDX_LIGHTSENSOR = dom.findIdxSensorOfHardware("Type", "Lux");
+  if (IDX_LIGHTSENSOR==-1){
+    IDX_LIGHTSENSOR = dom.idx_of_jsonvar(dom.sendDomoticz("/json.htm?type=createdevice&idx="+String(dom.IDX_HARDWARE)+"&sensorname=lux_"+String(dom.IDX_HARDWARE)+"&sensormappedtype=0xF601"));
+  }
+#endif
+
 #ifdef FEATURE_SERVER
   server.on("/Switch", relayFromServer);
+  server.on("/Status", statusPage);
   server.begin();
 #endif
 
@@ -149,6 +168,7 @@ void setup() {
 #endif
 
 #ifdef FEATURE_MOTION
+    Serial.printf("try to define Motion sensor IDX\n");
     IDX_MOTION = dom.findIdxSensorOfHardware("SwitchTypeVal", 8);
     if (IDX_MOTION == -1){
       String motion_name = "Motion_Sensor";
@@ -169,12 +189,15 @@ int hum2humsat(float h) {
   return 2;
 }
 
+int vol2lum(float Vout){
+  float RLDR = (10000 * (3.3 - Vout))/Vout;
+  int phys=500/(RLDR/1000);
+  return phys;
+}
+
 void loop() {
-#if defined(FEATURE_SERVER) || defined(FEATURE_MOTION)
-  delay(500);
+#if defined(FEATURE_SERVER)
   server.handleClient();
-#else
-  delay(5000);
 #endif
 
   unsigned long currentMillis = millis();
@@ -197,7 +220,16 @@ void loop() {
     float hum = dht.readHumidity();
     int hum_sat = hum2humsat(hum);
     dom.sendValue(IDX_DHT,  String(temperature) + ";" + hum + ";" + hum_sat);
+#endif
 
+#ifdef FEATURE_LIGHTSENSOR
+  dom.sendSValue(IDX_LIGHTSENSOR,  String(vol2lum(analogRead(PIN_LIGHTSENSOR) / 1024.0f)));
+#endif
+
+#if defined(FEATURE_SERVER) || defined(FEATURE_MOTION)
+  delay(500);
+#else
+  delay(5000);
 #endif
   }
 }
