@@ -2,13 +2,13 @@
 
 Domoticz::Domoticz(String host_, int port_) :
   host(host_),
-  port(port_)
+  port(port_),
+  doc(1024*128)
 {
-  
     Serial.printf("[Domoticz  constructor %s, %d]\n", host.c_str(), port);
 }
 
-Domoticz::Domoticz()
+Domoticz::Domoticz() : doc(1024*32)
 {
     Serial.printf("[Domoticz  constructor NULL]\n");
 }
@@ -26,68 +26,80 @@ void Domoticz::Setup(String host_, int port_){
   } 
 }
 
-JSONVar Domoticz::sendDomoticz(String url) {
+DynamicJsonDocument* Domoticz::sendDomoticz(String url) {
   Serial.printf("[sendDomoticz] >> %S\n", url.c_str());
+  http.useHTTP10(true);
   http.begin(host, port, url);
   int httpCode = http.GET();
   if (httpCode == 200) {
-    String ret = http.getString();
-    //Serial.printf("[sendDomoticz] << %S\n", ret.c_str());
-    JSONVar result = JSON.parse(ret);
+    Serial.printf("[sendDomoticz] %d >>\n", http.getSize());
+    
+    deserializeJson(doc, http.getStream());
     http.end();
-    return result;
+    //serializeJson(doc, Serial);
+    //Serial.printf("\n");
+    return &doc;
   } else {
     Serial.printf("[Err status %d]\n", httpCode);
     http.end();
-    JSONVar nulljson(false);
-    return nulljson;
+    return NULL;
   }
 }
 
-int Domoticz::idx_of_jsonvar(JSONVar v){
-  return v.hasOwnProperty("idx") ?String((const char*) v["idx"]).toInt() : -1;
+int Domoticz::idx_of_jsonvar(JsonObject v){
+  return v.containsKey("idx") ?String((const char*) v["idx"]).toInt() : -1;
+}
+
+int Domoticz::idx_of_jsonvar(DynamicJsonDocument *v){
+  return v->containsKey("idx") ?String((const char*) (*v)["idx"]).toInt() : -1;
 }
 
 int Domoticz::findIdxHardware(String name) {
-  JSONVar result = sendDomoticz("/json.htm?type=hardware");
-  if (result.hasOwnProperty("result")) {
-    Serial.printf("[Domoticz findIdxHardware] Liste de hardwares non vide \n");
-    JSONVar resultTab = result["result"];
-    int l = resultTab.length();
-    Serial.printf("[Domoticz findIdx] %d hardwares\n", l);
-    for (int i = 0; i < l; i ++) {
-      if (resultTab[i]["Name"] == name ) {
-        return idx_of_jsonvar(resultTab[i]);
+  DynamicJsonDocument *result = sendDomoticz("/json.htm?type=hardware");
+  if (result != NULL && result->containsKey("result")) {
+    JsonArray resultTab = (*result)["result"];
+    Serial.printf("[Domoticz findIdxHardware] Liste de hardwares non vide %d\n", resultTab.size());
+    for(JsonVariant v : resultTab) {
+      const String vname = v["Name"];
+
+    Serial.printf(" SEARCH %s GOT %s \n", vname.c_str(), name.c_str());
+      
+      if (vname == name ) {
+        return idx_of_jsonvar(v.as<JsonObject>());
       }
     }
+  }else{
+    Serial.printf("BAD JSON\n");
   }
   return -1;
 }
 int Domoticz::findIdx(int hardwareID) {
-  JSONVar result = sendDomoticz("/json.htm?type=devices");
-  if (result.hasOwnProperty("result")) {
+  DynamicJsonDocument *result = sendDomoticz("/json.htm?type=devices&filter=all");
+  if (result != NULL && result->containsKey("result")) {
     Serial.printf("[Domoticz findIdx] Liste de devices non vide \n");
-    JSONVar resultTab = result["result"];
-    int l = resultTab.length();
+    JsonArray resultTab = (*result)["result"];
+    int l = resultTab.size();
     Serial.printf("[Domoticz findIdx] %d devices\n", l);
     for (int i = 0; i < l; i ++) {
       if ((int)resultTab[i]["HardwareID"] == hardwareID ) {
-        return idx_of_jsonvar(resultTab[i]);
+        return idx_of_jsonvar(resultTab[i].as<JsonObject>());
       }
     }
   }
   return -1;
 }
 int Domoticz::findIdxSensorOfHardware(int idHardware, String property, int value, int skip) {
-  JSONVar result = sendDomoticz("/json.htm?type=devices");
-  if (result.hasOwnProperty("result")) {
+  DynamicJsonDocument *result = sendDomoticz("/json.htm?type=devices&filter=all");
+  
+  Serial.printf("SEARCH hard :%d %s %d", idHardware, property.c_str(), value);
+  if (result != NULL && result->containsKey("result")) {
     Serial.printf("[Domoticz findIdxSensorOfHardware] Liste de devices non vide\n");
-    JSONVar resultTab = result["result"];
-    int l = resultTab.length();
+    JsonArray resultTab = (*result)["result"];
+    int l = resultTab.size();
     Serial.printf("[Domoticz findIdxSensorOfHardware] %d devices\n", l);
     for (int i = 0; i < l; i ++) {
-      if ((int)resultTab[i]["HardwareID"] == idHardware && resultTab[i].hasOwnProperty(property) && (int)resultTab[i][property] == value) {
-        if (!skip) return idx_of_jsonvar(resultTab[i]);
+      if ((int)resultTab[i]["HardwareID"] == idHardware && resultTab[i].containsKey(property) && (int)resultTab[i][property] == value) {
+        if (!skip) return idx_of_jsonvar(resultTab[i].as<JsonObject>());
         skip --;
       }
     }
@@ -99,18 +111,20 @@ int Domoticz::findIdxSensorOfHardware(int idHardware, String property, int value
 }
 
 int Domoticz::findIdxSensorOfHardware(int idHardware, String property, String value) {
-  JSONVar result = sendDomoticz("/json.htm?type=devices");
-  if (result.hasOwnProperty("result")) {
+  DynamicJsonDocument *result = sendDomoticz("/json.htm?type=devices&filter=all");
+  if (result != NULL && result->containsKey("result")) {
     Serial.printf("[Domoticz findIdxSensorOfHardware] Liste de devices non vide\n");
-    JSONVar resultTab = result["result"];
-    int l = resultTab.length();
+    JsonArray resultTab = (*result)["result"];
+    int l = resultTab.size();
     Serial.printf("[Domoticz findIdxSensorOfHardware] %d devices\n", l);
     for (int i = 0; i < l; i ++) {
       String propval = (const char*)resultTab[i][property];
-      if ((int)resultTab[i]["HardwareID"] == idHardware && resultTab[i].hasOwnProperty(property) && propval == value) {
-        return idx_of_jsonvar(resultTab[i]);
+      if ((int)resultTab[i]["HardwareID"] == idHardware && resultTab[i].containsKey(property) && propval == value) {
+        return idx_of_jsonvar(resultTab[i].as<JsonObject>());
       }
     }
+  }else{
+    Serial.printf("NO RESULT search :%d %s %s", idHardware, property.c_str(), value.c_str());
   }
   return -1;
 }
@@ -127,14 +141,16 @@ int Domoticz::relayID(int nth){
   return findIdxSensorOfHardware(IDX_HARDWARE, "SwitchTypeVal", 0, nth);
 }
 
-JSONVar Domoticz::deviceStatus(int IDX){
+DynamicJsonDocument* Domoticz::deviceStatus(int IDX){
   return sendDomoticz("/json.htm?type=devices&rid="+String(IDX));
 }
 bool Domoticz::isRelayOn(int IDX){
   if (IDX == -1){
     return false;
   }
-  return String((const char*)deviceStatus(IDX)[ "result" ][0]["Status"]) == String("On");
+  DynamicJsonDocument* d = deviceStatus(IDX);
+  return d != NULL &&
+  d->containsKey("result") && (*d)["result"][0]["Status"] == "On";
 }
 
 int Domoticz::createVirtualSensor(String name, int type){

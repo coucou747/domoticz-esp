@@ -1,7 +1,7 @@
 
 #ifndef DOMOTICZ_H
 #define DOMOTICZ_H
-#include <Arduino_JSON.h>
+#include <ArduinoJson.h>
 #include <ESP8266HTTPClient.h>
 
 class Domoticz {
@@ -10,13 +10,16 @@ class Domoticz {
     String host;
     int port;
     
+    DynamicJsonDocument doc;
+    
   public:
     int IDX_HARDWARE;
     Domoticz(String host, int port);
     Domoticz();
     void Setup(String host, int port);
-    JSONVar sendDomoticz(String url) ;
-    int idx_of_jsonvar(JSONVar v);
+    DynamicJsonDocument* sendDomoticz(String url) ;
+    int idx_of_jsonvar(JsonObject v);
+    int idx_of_jsonvar(DynamicJsonDocument* v);
     int findIdxHardware(String name);
     int findIdx(int hardwareID);
     int findIdxSensorOfHardware(int idHardware, String property, int value, int skip);
@@ -29,7 +32,7 @@ class Domoticz {
     int createDevice(String name, int type, int subtype);
     void sendValue(int IDX, String value);
     void sendSValue(int IDX, String value);
-    JSONVar deviceStatus(int IDX) ;
+    DynamicJsonDocument* deviceStatus(int IDX) ;
     bool isRelayOn(int IDX) ;
 };
 

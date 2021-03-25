@@ -20,8 +20,12 @@ FEATURE_LIGHTSENSOR
 efine PIN_LIGHTSENSOR (eg A0)
 */
 
-/* config pour mes D1 litle
+/* Config pour sonoff : généric esp8266  */
+#define FEATURE_RELAY
+const int relay_enabled[] = { 12 };
 
+
+/* config pour mes D1 litle
 #define FEATURE_LIGHTSENSOR
 #define PIN_LIGHTSENSOR A0
 
@@ -31,16 +35,19 @@ efine PIN_LIGHTSENSOR (eg A0)
 
 #define FEATURE_MOTION
 #define PIN_MOTION D6
+*/
 
-
+/* config du relais lampe D1 mini
+#define FEATURE_RELAY
+const int relay_enabled[] = {D4};
 */
 
 
 /* Config pour mon esp01
-*/
 #define FEATURE_RELAY
 const int relay_enabled[] = {2};
 
+*/
 
 
 

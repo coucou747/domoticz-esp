@@ -119,11 +119,6 @@ void setup() {
   }
 #endif
 
-#ifdef FEATURE_MOTION
-  pinMode(PIN_MOTION, INPUT);
-  attachInterrupt(digitalPinToInterrupt(PIN_MOTION), detectsMovement, CHANGE);
-#endif
-
   Serial.printf("setup domoticz...\n");
 
 #ifdef FEATURE_DHT
@@ -177,6 +172,11 @@ void setup() {
       Serial.printf("Motion sensor added to domoticz (ID %d)\n", IDX_MOTION);
     }
     Serial.printf("Motion sensor IDX = %d\n", IDX_MOTION);
+#endif
+
+#ifdef FEATURE_MOTION
+  pinMode(PIN_MOTION, INPUT);
+  attachInterrupt(digitalPinToInterrupt(PIN_MOTION), detectsMovement, CHANGE);
 #endif
 
   previousMillis = millis() - watchdog;
